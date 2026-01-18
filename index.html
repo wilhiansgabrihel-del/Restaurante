@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurante OS - Versão Master Pagamento</title>
+    <style>
+        :root { --primary: #2c3e50; --success: #2ecc71; --danger: #e74c3c; --info: #3498db; --warning: #f1c40f; --light: #ecf0f1; --dark: #1a252f; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #333; }
+        
+        .header-stats { background: var(--primary); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100; }
+        .nav-buttons { display: flex; gap: 10px; }
+        
+        .tela { display: none; padding: 25px; animation: fadeIn 0.3s; }
+        .ativa { display: block; }
+
+        .container { display: grid; grid-template-columns: 1fr 350px; gap: 25px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+
+        .grid-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .mesa-box { background: white; padding: 20px; border-radius: 12px; text-align: center; border-top: 8px solid #bdc3c7; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .mesa-box.ocupada { border-top-color: var(--danger); background: #fff5f5; }
+        .mesa-box.pronta { border-top-color: var(--success); animation: pulse 2s infinite; }
+
+        .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-primary { background: var(--info); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: #333; }
+        .btn-sm { padding: 5px 10px; font-size: 0.8em; }
+
+        .item-lancamento { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .input-qtd { width: 55px; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 5px; font-weight: bold; }
+        .estoque-alerta { background: #ffebee !important; color: #c62828 !important; }
+
+        .cat-badge { background: #e9ecef; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; color: #666; font-weight: bold; }
+        input, select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+
+        .header-mesas { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+        .actions-mesas { display: flex; gap: 10px; flex-wrap: wrap; }
+        .actions-mesas input { width: 100px; }
+        .grid-detalhes { display: grid; grid-template-columns: 1.1fr 1fr; gap: 30px; margin-top: 20px; }
+        .stats-historico { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stats-historico .card { flex: 1; text-align: center; background: var(--light); }
+
+        /* Estilos do Fechamento */
+        .linha-resumo { display: flex; justify-content: space-between; padding: 8px 0; font-size: 1.1em; }
+        .linha-resumo.total { font-size: 1.5em; font-weight: bold; color: var(--success); border-top: 2px solid #eee; margin-top: 10px; padding-top: 15px; }
+        .input-monetario { width: 100px; text-align: right; font-weight: bold; color: #555; }
+        .lista-itens-recibo { max-height: 200px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: left; font-size: 0.9em; border: 1px solid #eee; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+
+        /* ========== RESPONSIVO MOBILE ========== */
+        @media (max-width: 768px) {
+            .header-stats {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                text-align: center;
+            }
+            .header-stats h2 { font-size: 1.3em; }
+            .nav-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            .nav-buttons .btn {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+            .tela { padding: 15px; }
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .container aside {
+                order: -1;
+            }
+            .grid-mesas {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 10px;
+            }
+            .mesa-box { padding: 15px; }
+            .card { padding: 15px; }
+            
+            /* Header mesas - mobile */
+            .header-mesas {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .actions-mesas {
+                flex-direction: column;
+            }
+            .actions-mesas input { width: 100% !important; }
+            
+            /* Detalhes da mesa - mobile */
+            .grid-detalhes {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            /* Histórico stats - mobile */
+            .stats-historico {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            /* Tabelas responsivas */
+            table { font-size: 0.85em; }
+            th, td { padding: 8px 5px; }
+            
+            /* Item lançamento */
+            .item-lancamento {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .item-lancamento > div {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            /* Fechamento de conta */
+            .linha-resumo { font-size: 0.95em; }
+            .input-monetario { width: 80px; }
+            
+            /* Botões de ação inline */
+            td .btn { 
+                padding: 4px 8px; 
+                font-size: 0.75em;
+                margin: 2px;
+            }
+            
+            /* Cozinha KDS */
+            #lista-cozinha .card {
+                padding: 10px;
+            }
+            
+            /* Formulários */
+            .form-row {
+                flex-direction: column;
+            }
+            .form-row input, .form-row select {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-stats h2 { font-size: 1.1em; }
+            .nav-buttons .btn {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            .grid-mesas {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .mesa-box { 
+                padding: 12px;
+                font-size: 0.9em;
+            }
+            .btn { 
+                padding: 8px 12px; 
+                font-size: 0.85em; 
+            }
+            table { font-size: 0.75em; }
+            th, td { padding: 6px 3px; }
+            
+            /* Tabela scrollável horizontal em telas muito pequenas */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-stats">
+        <div><h2 style="margin:0">Restaurante OS 2.0</h2></div>
+        <div class="nav-buttons">
+            <button class="btn btn-primary" onclick="mudarTela('salao')">🏠 Salão</button>
+            <button class="btn btn-primary" onclick="mudarTela('cardapio')">📖 Cardápio</button>
+            <button class="btn btn-primary" style="background:#673ab7" onclick="mudarTela('estoque')">📦 Estoque</button>
+            <button class="btn btn-primary" style="background:#9c27b0" onclick="mudarTela('historico')">📜 Histórico</button>
+        </div>
+    </header>
+
+    <div id="tela-salao" class="tela ativa">
+        <div class="container">
+            <main>
+                <div class="card">
+                    <div class="header-mesas">
+                        <h2>📍 Mapa de Mesas</h2>
+                        <div class="actions-mesas">
+                            <input type="number" id="input-num-mesa" value="101" style="font-weight:bold; font-size:1.1em">
+                            <button class="btn btn-success" onclick="abrirNovaMesa()">+ Abrir Mesa</button>
+                        </div>
+                    </div>
+                    <div class="grid-mesas" id="grid-mesas"></div>
+                </div>
+            </main>
+            <aside class="card" style="background:var(--primary); color:white">
+                <h3>🍳 Pedidos na Cozinha</h3>
+                <div id="lista-cozinha"></div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="tela-detalhes" class="tela">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <button class="btn btn-sm" onclick="mudarTela('salao')">← Voltar</button>
+                <h2 id="titulo-detalhes-mesa" style="margin:0">Mesa</h2>
+            </div>
+            <div class="grid-detalhes">
+                <div>
+                    <h3>Lançar Itens</h3>
+                    <input type="text" id="busca-pedido" placeholder="Pesquisar..." onkeyup="renderizarItensLancamento()" style="width:100%; margin-bottom:15px;">
+                    <div id="opcoes-cardapio" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;"></div>
+                </div>
+                <div>
+                    <h3>Consumo da Mesa</h3>
+                    <div id="itens-consumo" style="max-height: 400px; overflow-y: auto;"></div>
+                    <hr>
+                    <div id="total-mesa-texto" style="font-size:1.5em; font-weight:bold; margin: 15px 0;">Total: R$ 0,00</div>
+                    <button class="btn btn-danger" onclick="abrirFechamento()" style="width:100%; font-size:1.2em">Fechar Conta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tela-estoque" class="tela">
+        <div class="card">
+            <h2>📦 Controle de Estoque</h2>
+            <table style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align:left; border-bottom: 2px solid #eee">
+                        <th style="padding:10px">Cód</th><th>Nome</th><th>Categoria</th><th>Preço</th><th style="width:150px">Qtd em Estoque</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-estoque"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tela-cardapio" class="tela">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+                <h2 style="margin:0">📖 Gerenciar Cardápio</h2>
+                <button class="btn btn-primary" onclick="sincronizarProdutosComAPI()" title="Sincroniza produtos que ainda não estão salvos na API">
+                    🔄 Sincronizar com API
+                </button>
+            </div>
+            <div style="display:flex; gap:10px; margin:20px 0; padding:15px; background: #f8f9fa; border-radius: 8px; flex-wrap:wrap">
+                <input type="text" id="c-cod" placeholder="Cód" style="width:80px">
+                <input type="text" id="c-nome" placeholder="Nome do Item" style="flex:1">
+                <select id="c-cat" style="min-width:150px"></select>
+                <input type="number" id="c-valor" placeholder="Preço" style="width:100px">
+                <button class="btn btn-success" onclick="cadastrarNoCardapio()">Cadastrar</button>
+            </div>
+            <table style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align:left; border-bottom: 2px solid #eee">
+                        <th style="padding:10px">Cód</th><th>Item</th><th>Categoria</th><th>Preço</th><th style="text-align:right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-cardapio"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tela-historico" class="tela">
+        <div class="card">
+            <h2>📜 Histórico de Vendas</h2>
+            <div class="stats-historico">
+                <div class="card">
+                    <h3>Faturamento</h3><p id="h-total" style="font-size:1.5em; font-weight:bold">R$ 0,00</p>
+                </div>
+                <div class="card">
+                    <h3>Vendas</h3><p id="h-vendas" style="font-size:1.5em; font-weight:bold">0</p>
+                </div>
+            </div>
+            <div style="margin-bottom: 15px; text-align: right;">
+                <button class="btn btn-danger" onclick="resetarHistorico()">🗑️ Limpar Histórico</button>
+            </div>
+            <table style="width:100%; border-collapse: collapse;">
+                <thead><tr style="text-align:left; border-bottom:2px solid #eee"><th>Data/Hora</th><th>Mesa</th><th>Total Pago</th></tr></thead>
+                <tbody id="corpo-historico"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tela-fechamento" class="tela">
+        <div class="card" style="max-width: 500px; margin: auto; text-align: center;">
+            <h2>🧾 Conferência de Pagamento</h2>
+            
+            <div style="text-align:left; margin-bottom:5px; font-weight:bold">Itens Consumidos:</div>
+            <div id="recibo-lista-itens" class="lista-itens-recibo"></div>
+
+            <div style="padding: 10px; background: #fff; border:1px solid #ddd; border-radius:8px">
+                <div class="linha-resumo">
+                    <span>Subtotal Itens:</span>
+                    <span id="f-subtotal">R$ 0,00</span>
+                </div>
+
+                <div class="linha-resumo">
+                    <span>+ Praia (Couvert/Taxa):</span>
+                    <input type="number" id="f-praia" class="input-monetario" value="0.00" onkeyup="calcularTotaisFechamento()" onchange="calcularTotaisFechamento()">
+                </div>
+                
+                <div class="linha-resumo" style="color:#666">
+                    <span style="display:flex; align-items:center; gap:5px">
+                        <input type="checkbox" id="check-servico" checked onchange="calcularTotaisFechamento()"> +10% (Serviço)
+                    </span>
+                    <span id="f-servico">R$ 0,00</span>
+                </div>
+
+                <div class="linha-resumo">
+                    <span>- Desconto:</span>
+                    <input type="number" id="f-desconto" class="input-monetario" value="0.00" onkeyup="calcularTotaisFechamento()" onchange="calcularTotaisFechamento()">
+                </div>
+
+                <div class="linha-resumo total">
+                    <span>TOTAL FINAL:</span>
+                    <span id="f-total-final">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; display:flex; gap:10px">
+                <button class="btn btn-danger" onclick="mudarTela('detalhes')" style="flex:1">Voltar</button>
+                <button class="btn btn-success" onclick="confirmarVendaFinal()" style="flex:1">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://6968d58969178471522bad83.mockapi.io';
+        const API_PRODUTOS = `${API_BASE_URL}/produtos`;
+        
+        const LISTA_CATEGORIAS = [
+            "Bebidas Não Alcoólicas", "Bebidas Alcoólicas", "Comidas", "Sobremesas", "Porções",
+            "Pratos Executivos", "Almoços", "Almoços, Frutos do Mar", 
+            "Almoços Peixes Fritos", "Caldinhos", "Pastéis", "Bolinhos", "Petiscos"
+        ];
+
+        // ========== FUNÇÕES DE API - PRODUTOS ==========
+        async function carregarProdutosAPI() {
+            try {
+                const response = await fetch(API_PRODUTOS);
+                if (!response.ok) throw new Error('Erro ao carregar produtos da API');
+                return await response.json() || [];
+            } catch (error) {
+                console.error('Erro ao carregar produtos da API:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Salva um produto no MockAPI.io usando POST
+         * 
+         * Exemplo de uso:
+         * const novoProduto = {
+         *     cod: "113",
+         *     nome: "Água de Coco",
+         *     valor: 8.50,
+         *     cat: "Bebidas Não Alcoólicas",
+         *     estoque: 15
+         * };
+         * const produtoSalvo = await criarProdutoAPI(novoProduto);
+         * 
+         * @param {Object} produto - Objeto do produto com: cod, nome, valor, cat, estoque
+         * @param {string} produto.cod - Código do produto
+         * @param {string} produto.nome - Nome do produto
+         * @param {number} produto.valor - Preço do produto
+         * @param {string} produto.cat - Categoria do produto
+         * @param {number} produto.estoque - Quantidade em estoque
+         * @returns {Promise<Object>} Produto criado com id da API
+         */
+        async function criarProdutoAPI(produto) {
+            try {
+                const response = await fetch(API_PRODUTOS, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(produto)
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro ao criar produto: ${response.status} ${response.statusText}`);
+                }
+                const produtoCriado = await response.json();
+                console.log('✅ Produto salvo na API:', produtoCriado);
+                return produtoCriado;
+            } catch (error) {
+                console.error('❌ Erro ao criar produto:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Salva múltiplos produtos no MockAPI.io
+         * @param {Array} produtos - Array de produtos para salvar
+         * @returns {Promise<Array>} Array de produtos criados
+         */
+        async function salvarProdutosAPI(produtos) {
+            const produtosSalvos = [];
+            const erros = [];
+            
+            for (const produto of produtos) {
+                try {
+                    const produtoSalvo = await criarProdutoAPI(produto);
+                    produtosSalvos.push(produtoSalvo);
+                } catch (error) {
+                    console.error(`Erro ao salvar produto ${produto.cod || produto.nome}:`, error);
+                    erros.push({ produto, erro: error });
+                }
+            }
+            
+            if (erros.length > 0) {
+                console.warn(`${erros.length} produto(s) não foram salvos:`, erros);
+            }
+            
+            console.log(`${produtosSalvos.length} produto(s) salvos com sucesso na API`);
+            return produtosSalvos;
+        }
+
+        /**
+         * Sincroniza produtos que ainda não estão salvos na API
+         * Verifica produtos sem ID da API e os salva
+         * @returns {Promise<number>} Número de produtos sincronizados
+         */
+        async function sincronizarProdutosComAPI() {
+            console.log('🔄 Iniciando sincronização de produtos com a API...');
+            
+            try {
+                const produtosAPI = await carregarProdutosAPI();
+                const produtosParaSalvar = [];
+                
+                // Verifica quais produtos do sistema não têm ID da API (não foram salvos)
+                for (const produto of sistema.cardapio) {
+                    // Se o produto não tem ID da API, precisa ser salvo
+                    if (!produto.id || typeof produto.id !== 'number') {
+                        // Verifica se já existe na API pelo código
+                        const existeNaAPI = produtosAPI.find(p => p.cod === produto.cod);
+                        if (!existeNaAPI) {
+                            produtosParaSalvar.push(produto);
+                        } else {
+                            // Se existe na API mas não tem ID local, atualiza o ID
+                            const index = sistema.cardapio.findIndex(p => p.cod === produto.cod);
+                            if (index !== -1) {
+                                sistema.cardapio[index] = existeNaAPI;
+                            }
+                        }
+                    }
+                }
+                
+                if (produtosParaSalvar.length === 0) {
+                    const mensagem = '✅ Todos os produtos já estão sincronizados com a API';
+                    console.log(mensagem);
+                    alert(mensagem);
+                    return 0;
+                }
+                
+                console.log(`📦 Encontrados ${produtosParaSalvar.length} produto(s) para sincronizar...`);
+                
+                // Salva os produtos que faltam
+                const produtosSalvos = await salvarProdutosAPI(produtosParaSalvar);
+                
+                // Atualiza o sistema com os IDs retornados
+                for (const produtoSalvo of produtosSalvos) {
+                    const index = sistema.cardapio.findIndex(p => p.cod === produtoSalvo.cod && (!p.id || typeof p.id !== 'number'));
+                    if (index !== -1) {
+                        sistema.cardapio[index] = produtoSalvo;
+                    }
+                }
+                
+                const mensagem = `✅ ${produtosSalvos.length} produto(s) sincronizados com sucesso!`;
+                console.log(mensagem);
+                alert(mensagem);
+                
+                // Recarrega os produtos da API para garantir sincronização completa
+                const produtosAtualizados = await carregarProdutosAPI();
+                sistema.cardapio = produtosAtualizados;
+                
+                renderizar();
+                return produtosSalvos.length;
+            } catch (error) {
+                const mensagem = '❌ Erro ao sincronizar produtos com a API';
+                console.error(mensagem, error);
+                alert(mensagem + ': ' + error.message);
+                return 0;
+            }
+        }
+
+        async function atualizarProdutoAPI(id, produto) {
+            try {
+                const response = await fetch(`${API_PRODUTOS}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(produto)
+                });
+                if (!response.ok) throw new Error('Erro ao atualizar produto');
+                return await response.json();
+            } catch (error) {
+                console.error('Erro ao atualizar produto:', error);
+                throw error;
+            }
+        }
+
+        async function deletarProdutoAPI(id) {
+            try {
+                const response = await fetch(`${API_PRODUTOS}/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Erro ao deletar produto');
+                return true;
+            } catch (error) {
+                console.error('Erro ao deletar produto:', error);
+                throw error;
+            }
+        }
+
+        const STORAGE_KEY_LOCAL = 'RESTAURANTE_DADOS_LOCAIS';
+
+        let sistema = {
+            cardapio: [],
+            mesas: [],
+            historico: [],
+            cozinha: [],
+            entregasCozinha: {}, // Controle de entregas por item: { "mesaId_nomeItem": quantidadeEntregue }
+            mesaAtivaId: null,
+            indexEditando: null
+        };
+
+        function resetarHistorico() {
+            if(confirm('Tem certeza que deseja limpar todo o histórico de vendas? Esta ação não pode ser desfeita.')) {
+                sistema.historico = [];
+                salvarDadosLocais();
+                renderizar();
+            }
+        }
+
+        // Salva dados locais (mesas, cozinha, entregas, histórico) no localStorage
+        function salvarDadosLocais() {
+            try {
+                const dadosLocais = {
+                    mesas: sistema.mesas,
+                    cozinha: sistema.cozinha,
+                    entregasCozinha: sistema.entregasCozinha,
+                    historico: sistema.historico
+                };
+                localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(dadosLocais));
+            } catch (e) {
+                console.error('Erro ao salvar dados locais:', e);
+            }
+        }
+
+        // Carrega dados locais do localStorage
+        function carregarDadosLocais() {
+            try {
+                const dados = localStorage.getItem(STORAGE_KEY_LOCAL);
+                if (dados) {
+                    const dadosLocais = JSON.parse(dados);
+                    sistema.mesas = dadosLocais.mesas || [];
+                    sistema.cozinha = dadosLocais.cozinha || [];
+                    sistema.entregasCozinha = dadosLocais.entregasCozinha || {};
+                    sistema.historico = dadosLocais.historico || [];
+                }
+            } catch (e) {
+                console.error('Erro ao carregar dados locais:', e);
+            }
+        }
+        
+        // Inicialização assíncrona
+        (async function inicializarSistema() {
+            // Carrega produtos da API
+            sistema.cardapio = await carregarProdutosAPI();
+            
+            // Carrega dados locais (mesas, cozinha, entregas, histórico) do localStorage
+            carregarDadosLocais();
+            
+            // Sincroniza produtos que possam não estar salvos na API
+            await sincronizarProdutosComAPI();
+            
+            // Renderiza após inicialização
+            renderizar();
+        })();
+
+        function carregarCategorias() {
+            const select = document.getElementById('c-cat');
+            select.innerHTML = LISTA_CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        carregarCategorias();
+
+        function gerarOpcoesCategorias(selecionada) {
+            return LISTA_CATEGORIAS.map(c => `<option value="${c}" ${c === selecionada ? 'selected' : ''}>${c}</option>`).join('');
+        }
+
+        
+        function mudarTela(tela) {
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+            document.getElementById('tela-' + tela).classList.add('ativa');
+            renderizar();
+        }
+
+        // --- GESTÃO DE MESAS ---
+        function abrirNovaMesa() {
+            const input = document.getElementById('input-num-mesa');
+            const num = input.value;
+            if(!num) return alert("Digite o número da mesa!");
+            if(sistema.mesas.find(m => (m.numeroMesa || m.id) == num)) return alert("Essa mesa já está no mapa!");
+            
+            // Cria mesa apenas localmente, sem salvar na API
+            const novaMesa = { numeroMesa: num, status: 'livre', pedidos: [] };
+            sistema.mesas.push(novaMesa);
+            input.value = parseInt(num) + 1; 
+            salvarDadosLocais();
+            renderizar();
+        }
+
+        function abrirDetalheMesa(numeroMesa) {
+            sistema.mesaAtivaId = numeroMesa;
+            mudarTela('detalhes');
+        }
+
+        // --- GESTÃO DE LANÇAMENTOS ---
+        async function lancarNaMesa(cod) {
+            const item = sistema.cardapio.find(i => i.cod == cod);
+            const qtdInput = document.getElementById(`qtd-add-${cod}`);
+            const qtd = parseInt(qtdInput.value) || 1;
+
+            if(item.estoque < qtd) return alert("Estoque insuficiente!");
+
+            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
+            const numeroMesa = mesa.numeroMesa || mesa.id;
+            
+            for(let i=0; i<qtd; i++) {
+                mesa.pedidos.push({ nome: item.nome, valor: item.valor });
+                // Adiciona item na cozinha (apenas local)
+                sistema.cozinha.push({ mesaId: numeroMesa, nomeItem: item.nome });
+            }
+            
+            // Atualiza estoque na API
+            const novoEstoque = item.estoque - qtd;
+            try {
+                if (item.id) {
+                    await atualizarProdutoAPI(item.id, {
+                        ...item,
+                        estoque: novoEstoque
+                    });
+                }
+                item.estoque = novoEstoque;
+            } catch (error) {
+                console.error('Erro ao atualizar estoque:', error);
+                alert('Erro ao atualizar estoque na API.');
+            }
+            
+            // Atualiza status da mesa (apenas local)
+            mesa.status = 'ocupada';
+            qtdInput.value = 1;
+            salvarDadosLocais();
+            renderizar();
+        }
+
+        async function ajustarQtdConsumo(nome, novaQtd) {
+            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
+            const numeroMesa = mesa.numeroMesa || mesa.id;
+            const atuais = mesa.pedidos.filter(p => p.nome === nome);
+            const diff = novaQtd - atuais.length;
+            const itemCardapio = sistema.cardapio.find(i => i.nome === nome);
+
+            if(novaQtd < 0) return;
+
+            if(diff > 0) { 
+                if(itemCardapio.estoque < diff) return alert("Não há estoque suficiente!");
+                for(let i=0; i<diff; i++) {
+                    mesa.pedidos.push({ nome: nome, valor: atuais[0].valor });
+                    // Adiciona item na cozinha (apenas local)
+                    sistema.cozinha.push({ mesaId: numeroMesa, nomeItem: nome });
+                }
+                
+                // Atualiza estoque na API
+                const novoEstoque = itemCardapio.estoque - diff;
+                try {
+                    if (itemCardapio.id) {
+                        await atualizarProdutoAPI(itemCardapio.id, {
+                            ...itemCardapio,
+                            estoque: novoEstoque
+                        });
+                    }
+                    itemCardapio.estoque = novoEstoque;
+                } catch (error) {
+                    console.error('Erro ao atualizar estoque:', error);
+                    alert('Erro ao atualizar estoque na API.');
+                }
+            } else if (diff < 0) {
+                const remover = Math.abs(diff);
+                for(let i=0; i<remover; i++) {
+                    // Remove pedido
+                    let lastIdx = -1;
+                    for(let j = mesa.pedidos.length - 1; j >= 0; j--) {
+                        if(mesa.pedidos[j].nome === nome) {
+                            lastIdx = j;
+                            break;
+                        }
+                    }
+                    if(lastIdx > -1) mesa.pedidos.splice(lastIdx, 1);
+                    
+                    // Remove da cozinha na API
+                    let idxCoz = -1;
+                    for(let j = sistema.cozinha.length - 1; j >= 0; j--) {
+                        if((sistema.cozinha[j].mesaId == numeroMesa || sistema.cozinha[j].mesaId == mesa.id) && sistema.cozinha[j].nomeItem == nome) {
+                            idxCoz = j;
+                            break;
+                        }
+                    }
+                    if(idxCoz > -1) {
+                        // Remove da cozinha (apenas local)
+                        sistema.cozinha.splice(idxCoz, 1);
+                }
+                }
+                
+                // Atualiza estoque na API
+                const novoEstoque = itemCardapio.estoque + remover;
+                try {
+                    if (itemCardapio.id) {
+                        await atualizarProdutoAPI(itemCardapio.id, {
+                            ...itemCardapio,
+                            estoque: novoEstoque
+                        });
+                    }
+                    itemCardapio.estoque = novoEstoque;
+                } catch (error) {
+                    console.error('Erro ao atualizar estoque:', error);
+                    alert('Erro ao atualizar estoque na API.');
+                }
+            }
+            
+            // Atualiza status da mesa (apenas local)
+            if(mesa.pedidos.length === 0) mesa.status = 'livre';
+            salvarDadosLocais();
+            renderizar();
+        }
+
+        // --- CARDÁPIO E ESTOQUE ---
+        async function cadastrarNoCardapio() {
+            const cod = document.getElementById('c-cod').value;
+            const nome = document.getElementById('c-nome').value;
+            const cat = document.getElementById('c-cat').value;
+            const valor = parseFloat(document.getElementById('c-valor').value);
+
+            if(!cod || !nome || isNaN(valor)) return alert("Preencha todos os campos!");
+            
+            const novoProduto = { cod, nome, cat, valor, estoque: 0 };
+            
+            try {
+                const produtoCriado = await criarProdutoAPI(novoProduto);
+                sistema.cardapio.push(produtoCriado);
+            ['c-cod', 'c-nome', 'c-valor'].forEach(id => document.getElementById(id).value = '');
+                renderizar();
+            } catch (error) {
+                alert('Erro ao cadastrar produto na API. Tente novamente.');
+                console.error(error);
+        }
+        }
+
+        async function salvarEdicaoInline(idx) {
+            const produto = sistema.cardapio[idx];
+            const produtoAtualizado = {
+                cod: document.getElementById(`edit-cod-${idx}`).value,
+                nome: document.getElementById(`edit-nome-${idx}`).value,
+                cat: document.getElementById(`edit-cat-${idx}`).value,
+                valor: parseFloat(document.getElementById(`edit-valor-${idx}`).value),
+                estoque: produto.estoque
+            };
+            
+            try {
+                // Se o produto tem id da API, atualiza na API
+                if (produto.id) {
+                    await atualizarProdutoAPI(produto.id, produtoAtualizado);
+                }
+                
+                // Atualiza no sistema local
+                Object.assign(produto, produtoAtualizado);
+            sistema.indexEditando = null;
+                renderizar();
+            } catch (error) {
+                alert('Erro ao atualizar produto na API. Tente novamente.');
+                console.error(error);
+        }
+        }
+
+        async function atualizarQtdEstoqueManual(idx, novaQtd) {
+            const produto = sistema.cardapio[idx];
+            const estoqueAtualizado = parseInt(novaQtd) || 0;
+            
+            try {
+                // Se o produto tem id da API, atualiza na API
+                if (produto.id) {
+                    await atualizarProdutoAPI(produto.id, {
+                        ...produto,
+                        estoque: estoqueAtualizado
+                    });
+                }
+                
+                produto.estoque = estoqueAtualizado;
+                renderizar();
+            } catch (error) {
+                alert('Erro ao atualizar estoque na API. Tente novamente.');
+                console.error(error);
+            }
+        }
+
+        async function deletarProduto(idx) {
+            const produto = sistema.cardapio[idx];
+            
+            if (!confirm(`Tem certeza que deseja excluir "${produto.nome}"?`)) {
+                return;
+            }
+            
+            try {
+                // Se o produto tem id da API, deleta na API
+                if (produto.id) {
+                    await deletarProdutoAPI(produto.id);
+                }
+                
+                sistema.cardapio.splice(idx, 1);
+                renderizar();
+            } catch (error) {
+                alert('Erro ao deletar produto na API. Tente novamente.');
+                console.error(error);
+            }
+        }
+
+        // --- RENDERIZADORES ---
+        function renderizar() {
+            // MAPA
+            document.getElementById('grid-mesas').innerHTML = sistema.mesas.map(m => {
+                const numeroMesa = m.numeroMesa || m.id;
+                return `
+                <div class="mesa-box ${m.status}" onclick="abrirDetalheMesa('${numeroMesa}')">
+                    <b>Mesa ${numeroMesa}</b><br><small>${m.status.toUpperCase()}</small>
+                </div>
+            `;
+            }).join('');
+
+            // COZINHA
+            let kds = {}; 
+            sistema.cozinha.forEach(c => { 
+                const mesaId = c.mesaId;
+                if(!kds[mesaId]) kds[mesaId] = {}; 
+                if(!kds[mesaId][c.nomeItem]) {
+                    kds[mesaId][c.nomeItem] = { quantidade: 0, entregues: 0 };
+                }
+                kds[mesaId][c.nomeItem].quantidade++;
+                // Recupera entregues do estado
+                const chaveEntrega = `${mesaId}_${c.nomeItem}`;
+                if(sistema.entregasCozinha && sistema.entregasCozinha[chaveEntrega]) {
+                    kds[mesaId][c.nomeItem].entregues = sistema.entregasCozinha[chaveEntrega];
+                }
+            });
+            
+            let kHtml = "";
+            for(let mid in kds) {
+                const itens = kds[mid];
+                let todosEntregues = true;
+                let itensHtml = "";
+                
+                for(let nomeItem in itens) {
+                    const { quantidade, entregues } = itens[nomeItem];
+                    const chaveEntrega = `${mid}_${nomeItem}`;
+                    
+                    if(entregues < quantidade) todosEntregues = false;
+                    
+                    itensHtml += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #eee;">
+                            <span style="flex:1">${nomeItem} x ${quantidade}</span>
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                <button class="btn btn-sm" style="background:#ddd; padding:2px 8px;" onclick="ajustarEntrega('${mid}', '${nomeItem}', -1)">-</button>
+                                <span style="min-width:30px; text-align:center; font-weight:bold; color:${entregues >= quantidade ? '#2ecc71' : '#e74c3c'}">${entregues}/${quantidade}</span>
+                                <button class="btn btn-sm" style="background:#ddd; padding:2px 8px;" onclick="ajustarEntrega('${mid}', '${nomeItem}', 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                kHtml += `
+                    <div style="background:#fff; color:#333; padding:10px; margin-bottom:10px; border-radius:8px">
+                        <b style="font-size:1.1em">Mesa ${mid}</b>
+                        <div style="margin-top:8px">${itensHtml}</div>
+                        <button class="btn btn-success btn-sm" onclick="concluirCozinha('${mid}')" style="margin-top:10px; width:100%" ${todosEntregues ? '' : 'disabled'}>
+                            ${todosEntregues ? '✅ Pronto' : '⏳ Aguardando entregas'}
+                        </button>
+                    </div>
+                `;
+            }
+            document.getElementById('lista-cozinha').innerHTML = kHtml || "Sem pedidos.";
+
+            // ESTOQUE - Ordenado por código crescente
+            const estoqueOrdenado = [...sistema.cardapio].sort((a, b) => {
+                const codA = isNaN(a.cod) ? a.cod : parseInt(a.cod);
+                const codB = isNaN(b.cod) ? b.cod : parseInt(b.cod);
+                if (typeof codA === 'number' && typeof codB === 'number') {
+                    return codA - codB;
+                }
+                return String(codA).localeCompare(String(codB));
+            });
+            
+            document.getElementById('corpo-estoque').innerHTML = estoqueOrdenado.map((i) => {
+                const idx = sistema.cardapio.findIndex(p => p === i);
+                return `
+                <tr class="${i.estoque < 5 ? 'estoque-alerta' : ''}">
+                    <td style="padding:10px">${i.cod}</td>
+                    <td>${i.nome}</td>
+                    <td><span class="cat-badge">${i.cat}</span></td>
+                    <td>R$ ${i.valor.toFixed(2)}</td>
+                    <td><input type="number" class="input-qtd" value="${i.estoque}" onchange="atualizarQtdEstoqueManual(${idx}, this.value)" style="width:80px"></td>
+                </tr>
+            `;
+            }).join('');
+
+            // CARDÁPIO - Ordenado por código crescente
+            const cardapioOrdenado = [...sistema.cardapio].sort((a, b) => {
+                // Converte código para número se possível, senão compara como string
+                const codA = isNaN(a.cod) ? a.cod : parseInt(a.cod);
+                const codB = isNaN(b.cod) ? b.cod : parseInt(b.cod);
+                if (typeof codA === 'number' && typeof codB === 'number') {
+                    return codA - codB;
+                }
+                return String(codA).localeCompare(String(codB));
+            });
+            
+            document.getElementById('corpo-cardapio').innerHTML = cardapioOrdenado.map((i, idxOriginal) => {
+                // Encontra o índice original no array não ordenado para manter referências corretas
+                const idx = sistema.cardapio.findIndex(p => p === i);
+                if(sistema.indexEditando === idx) {
+                    return `<tr>
+                        <td><input type="text" id="edit-cod-${idx}" value="${i.cod}" style="width:50px"></td>
+                        <td><input type="text" id="edit-nome-${idx}" value="${i.nome}"></td>
+                        <td><select id="edit-cat-${idx}">${gerarOpcoesCategorias(i.cat)}</select></td>
+                        <td><input type="number" id="edit-valor-${idx}" value="${i.valor}" style="width:80px"></td>
+                        <td style="text-align:right"><button class="btn btn-success btn-sm" onclick="salvarEdicaoInline(${idx})">Gravar</button></td>
+                    </tr>`;
+                }
+                return `<tr>
+                    <td style="padding:10px">${i.cod}</td><td>${i.nome}</td><td>${i.cat}</td><td>R$ ${i.valor.toFixed(2)}</td>
+                    <td style="text-align:right">
+                        <button class="btn btn-warning btn-sm" onclick="sistema.indexEditando=${idx}; renderizar()">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deletarProduto(${idx})">X</button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // MESA DETALHE
+            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
+            if(mesa) {
+                const numeroMesa = mesa.numeroMesa || mesa.id;
+                document.getElementById('titulo-detalhes-mesa').innerText = "Mesa " + numeroMesa;
+                let agrupado = {}; 
+                mesa.pedidos.forEach(p => agrupado[p.nome] = (agrupado[p.nome] || 0) + 1);
+                
+                let cHtml = "";
+                for(let n in agrupado) {
+                    cHtml += `
+                    <div class="item-lancamento">
+                        <span><b>${n}</b></span>
+                        <div style="display:flex; gap:10px; align-items:center">
+                            <input type="number" class="input-qtd" value="${agrupado[n]}" onchange="ajustarQtdConsumo('${n}', this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="ajustarQtdConsumo('${n}', 0)">Remover</button>
+                        </div>
+                    </div>`;
+                }
+                document.getElementById('itens-consumo').innerHTML = cHtml || "Mesa vazia.";
+                const total = mesa.pedidos.reduce((a,b) => a + b.valor, 0);
+                document.getElementById('total-mesa-texto').innerText = `Total: R$ ${total.toFixed(2)}`;
+                renderizarItensLancamento();
+            }
+
+            // HISTÓRICO
+            let fat = sistema.historico.reduce((a,b) => a + b.total, 0);
+            document.getElementById('h-total').innerText = `R$ ${fat.toFixed(2)}`;
+            document.getElementById('h-vendas').innerText = sistema.historico.length;
+            document.getElementById('corpo-historico').innerHTML = sistema.historico.map(h => `
+                <tr><td>${new Date(h.ts).toLocaleString()}</td><td>Mesa ${h.mesa}</td><td>R$ ${h.total.toFixed(2)}</td></tr>
+            `).join('');
+        }
+
+        function renderizarItensLancamento() {
+            const busca = document.getElementById('busca-pedido').value.toLowerCase();
+            const categoriasDisponiveis = [...new Set(sistema.cardapio.map(i => i.cat))];
+            
+            document.getElementById('opcoes-cardapio').innerHTML = categoriasDisponiveis.map(cat => {
+                const itens = sistema.cardapio.filter(i => i.cat === cat && i.nome.toLowerCase().includes(busca));
+                if(itens.length === 0) return "";
+                return `
+                    <div style="background:#f4f4f4; padding:5px 10px; font-weight:bold; margin-top:5px; border-bottom:1px solid #ddd">${cat}</div>
+                    ${itens.map(i => `
+                        <div class="item-lancamento">
+                            <span>${i.nome} <small>(Est: ${i.estoque})</small></span>
+                            <div style="display:flex; gap:5px">
+                                <input type="number" id="qtd-add-${i.cod}" value="1" class="input-qtd">
+                                <button class="btn btn-success btn-sm" onclick="lancarNaMesa('${i.cod}')" ${i.estoque <= 0 ? 'disabled' : ''}>Lançar</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }).join('');
+        }
+
+        // Ajusta quantidade entregue de um item na cozinha
+        function ajustarEntrega(mesaId, nomeItem, delta) {
+            const chave = `${mesaId}_${nomeItem}`;
+            
+            // Inicializa se não existir
+            if(!sistema.entregasCozinha[chave]) {
+                sistema.entregasCozinha[chave] = 0;
+            }
+            
+            // Conta quantos itens existem na cozinha
+            const totalItem = sistema.cozinha.filter(c => c.mesaId == mesaId && c.nomeItem == nomeItem).length;
+            
+            // Ajusta o valor
+            sistema.entregasCozinha[chave] += delta;
+            
+            // Limita entre 0 e o total
+            if(sistema.entregasCozinha[chave] < 0) sistema.entregasCozinha[chave] = 0;
+            if(sistema.entregasCozinha[chave] > totalItem) sistema.entregasCozinha[chave] = totalItem;
+            
+            salvarDadosLocais();
+            renderizar();
+        }
+
+        function concluirCozinha(mid) {
+            // Verifica se todos os itens foram entregues
+            const itensMesa = sistema.cozinha.filter(c => c.mesaId == mid);
+            const itensAgrupados = {};
+            itensMesa.forEach(c => {
+                if(!itensAgrupados[c.nomeItem]) itensAgrupados[c.nomeItem] = 0;
+                itensAgrupados[c.nomeItem]++;
+            });
+            
+            let todosEntregues = true;
+            for(let nomeItem in itensAgrupados) {
+                const chave = `${mid}_${nomeItem}`;
+                const entregues = sistema.entregasCozinha[chave] || 0;
+                if(entregues < itensAgrupados[nomeItem]) {
+                    todosEntregues = false;
+                    break;
+                }
+            }
+            
+            if(!todosEntregues) {
+                alert('Ainda há itens não entregues para esta mesa!');
+                return;
+            }
+            
+            // Limpa as entregas da mesa
+            for(let nomeItem in itensAgrupados) {
+                const chave = `${mid}_${nomeItem}`;
+                delete sistema.entregasCozinha[chave];
+            }
+            
+            // Remove itens da cozinha (apenas local) - NÃO afeta pedidos da mesa
+            sistema.cozinha = sistema.cozinha.filter(c => c.mesaId != mid);
+            
+            // Atualiza APENAS o status da mesa (pedidos permanecem intactos)
+            const mesaEncontrada = sistema.mesas.find(mesa => (mesa.numeroMesa || mesa.id) == mid);
+            if(mesaEncontrada) {
+                mesaEncontrada.status = 'pronta';
+                // NÃO modifica mesaEncontrada.pedidos - eles devem permanecer para o fechamento da conta
+            }
+            salvarDadosLocais();
+            renderizar();
+        }
+
+        // --- LÓGICA DE FECHAMENTO (ATUALIZADA) ---
+        
+        let subtotalCache = 0;
+
+        function abrirFechamento() {
+            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
+            
+            // 1. Gera Lista
+            let agrupado = {}; 
+            mesa.pedidos.forEach(p => agrupado[p.nome] = {qtd: (agrupado[p.nome]?.qtd || 0) + 1, valor: p.valor});
+            
+            let htmlItens = Object.keys(agrupado).map(nome => 
+                `<div style="display:flex; justify-content:space-between; border-bottom:1px dotted #ccc; padding:2px 0;">
+                    <span>${agrupado[nome].qtd}x ${nome}</span>
+                    <span>R$ ${(agrupado[nome].qtd * agrupado[nome].valor).toFixed(2)}</span>
+                </div>`
+            ).join('');
+            document.getElementById('recibo-lista-itens').innerHTML = htmlItens || "<p>Nenhum item consumido.</p>";
+
+            // 2. Calcula Subtotal
+            subtotalCache = mesa.pedidos.reduce((a,b) => a + b.valor, 0);
+            document.getElementById('f-subtotal').innerText = `R$ ${subtotalCache.toFixed(2)}`;
+
+            // 3. Reseta Inputs
+            document.getElementById('f-desconto').value = "0.00";
+            document.getElementById('f-praia').value = "0.00";
+            document.getElementById('check-servico').checked = true;
+
+            calcularTotaisFechamento();
+            mudarTela('fechamento');
+        }
+
+        function calcularTotaisFechamento() {
+            const temServico = document.getElementById('check-servico').checked;
+            const desconto = parseFloat(document.getElementById('f-desconto').value) || 0;
+            const praia = parseFloat(document.getElementById('f-praia').value) || 0;
+
+            // NOVA LÓGICA: 10% é sobre (Itens + Praia)
+            const baseCalculoServico = subtotalCache + praia;
+            const valorServico = temServico ? (baseCalculoServico * 0.10) : 0;
+            
+            const totalFinal = baseCalculoServico + valorServico - desconto;
+
+            document.getElementById('f-servico').innerText = `R$ ${valorServico.toFixed(2)}`;
+            document.getElementById('f-total-final').innerText = `R$ ${totalFinal.toFixed(2)}`;
+        }
+
+        async function confirmarVendaFinal() {
+            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
+            const numeroMesa = mesa.numeroMesa || mesa.id;
+            
+            // Recalcula final
+            const temServico = document.getElementById('check-servico').checked;
+            const desconto = parseFloat(document.getElementById('f-desconto').value) || 0;
+            const praia = parseFloat(document.getElementById('f-praia').value) || 0;
+            const baseCalculoServico = subtotalCache + praia;
+            const valorServico = temServico ? (baseCalculoServico * 0.10) : 0;
+            const totalFinal = baseCalculoServico + valorServico - desconto;
+
+            // Cria histórico local
+            const novoHistorico = { ts: new Date().toISOString(), mesa: numeroMesa, total: totalFinal };
+            sistema.historico.push(novoHistorico);
+            
+            // Atualiza mesa e salva tudo localmente
+            mesa.pedidos = [];
+            mesa.status = 'livre';
+            salvarDadosLocais();
+            mudarTela('salao');
+        }
+    </script>
+</body>
+</html>
