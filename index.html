@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurante OS - Versão Master Pagamento</title>
     <style>
-        :root { --primary: #2c3e50; --success: #2ecc71; --danger: #e74c3c; --info: #3498db; --warning: #f1c40f; --light: #ecf0f1; --dark: #1a252f; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #333; }
+        :root { --primary: #1e3a5f; --success: #2ecc71; --danger: #e74c3c; --info: #3498db; --warning: #f1c40f; --light: #ecf0f1; --dark: #1a252f; --teal: #17a2b8; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f5f5dc; color: #333; }
         
         .header-stats { background: var(--primary); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100; }
-        .nav-buttons { display: flex; gap: 10px; }
+        .nav-buttons { display: flex; gap: 5px; }
+        .nav-buttons .btn { background: transparent; border: none; color: white; padding: 8px 15px; cursor: pointer; position: relative; border-radius: 0; }
+        .nav-buttons .btn:hover { background: rgba(255,255,255,0.1); }
+        .nav-buttons .btn.ativo { border-bottom: 3px solid var(--teal); }
         
         .tela { display: none; padding: 25px; animation: fadeIn 0.3s; }
         .ativa { display: block; }
@@ -17,10 +20,26 @@
         .container { display: grid; grid-template-columns: 1fr 350px; gap: 25px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
 
-        .grid-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .mesa-box { background: white; padding: 20px; border-radius: 12px; text-align: center; border-top: 8px solid #bdc3c7; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .mesa-box.ocupada { border-top-color: var(--danger); background: #fff5f5; }
-        .mesa-box.pronta { border-top-color: var(--success); animation: pulse 2s infinite; }
+        /* Setores de Mesas */
+        .setor-mesas { margin-bottom: 30px; }
+        .setor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-weight: bold; font-size: 1.1em; }
+        .setor-header .setor-icon { font-size: 1.5em; }
+        .grid-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; }
+        .mesa-box { text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
+        .mesa-box .mesa-icon { font-size: 3em; margin-bottom: 10px; }
+        .mesa-box .mesa-label { background: white; padding: 6px 12px; border-radius: 999px; font-size: 0.9em; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        /* Status visual das mesas */
+        /* \"Ocupada\" (sem consumo) em azul */
+        .mesa-box .mesa-label.livre { background: #3498db; color: #ffffff; }
+        .mesa-box .mesa-label.pronta { background: #2ecc71; color: white; }
+        .mesa-box .mesa-label.pendente { background: #e74c3c; color: white; }
+        /* classes antigas mantidas para compatibilidade, mas não usadas na marcação nova */
+        .mesa-box .mesa-label.ocupada { background: #e74c3c; color: white; }
+        .mesa-box .mesa-label.aguardando { background: #f1c40f; color: #333; }
+        
+        /* Ícones específicos por setor */
+        .setor-areia .mesa-icon { color: #8b4513; }
+        .setor-salao .mesa-icon { color: #654321; }
 
         .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-primary { background: var(--info); color: white; }
@@ -178,12 +197,12 @@
 <body>
 
     <header class="header-stats">
-        <div><h2 style="margin:0">Restaurante OS 2.0</h2></div>
+        <div><h2 style="margin:0">Restaurante Mar Azul</h2></div>
         <div class="nav-buttons">
-            <button class="btn btn-primary" onclick="mudarTela('salao')">🏠 Salão</button>
-            <button class="btn btn-primary" onclick="mudarTela('cardapio')">📖 Cardápio</button>
-            <button class="btn btn-primary" style="background:#673ab7" onclick="mudarTela('estoque')">📦 Estoque</button>
-            <button class="btn btn-primary" style="background:#9c27b0" onclick="mudarTela('historico')">📜 Histórico</button>
+            <button class="btn ativo" id="nav-salao" onclick="mudarTela('salao')">🏠 Salão</button>
+            <button class="btn" id="nav-cardapio" onclick="mudarTela('cardapio')">📖 Cardápio</button>
+            <button class="btn" id="nav-historico" onclick="mudarTela('historico')">📜 Histórico</button>
+            <button class="btn" id="nav-estoque" onclick="mudarTela('estoque')">⏰ Estoque</button>
         </div>
     </header>
 
@@ -191,28 +210,38 @@
         <div class="container">
             <main>
                 <div class="card">
-                    <div class="header-mesas">
-                        <h2>📍 Mapa de Mesas</h2>
-                        <div class="actions-mesas">
-                            <input type="number" id="input-num-mesa" value="101" style="font-weight:bold; font-size:1.1em">
-                            <button class="btn btn-success" onclick="abrirNovaMesa()">+ Abrir Mesa</button>
-                        </div>
+                    <div class="header-mesas" style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                        <h2 style="margin:0; display:flex; align-items:center; gap:8px;">🌊 Mapa de Mesas</h2>
                     </div>
-                    <div class="grid-mesas" id="grid-mesas"></div>
+                    <div id="mapa-mesas-setores"></div>
                 </div>
             </main>
-            <aside class="card" style="background:var(--primary); color:white">
-                <h3>🍳 Pedidos na Cozinha</h3>
-                <div id="lista-cozinha"></div>
+            <aside>
+                <div class="card" style="background:var(--primary); color:white; margin-bottom:15px;">
+                    <h3 style="display:flex; align-items:center; gap:8px; margin-top:0;">👨‍🍳 Pedidos na Cozinha</h3>
+                    <div id="lista-cozinha"></div>
+                </div>
+                <div class="card">
+                    <input type="text" id="busca-mesa" placeholder="🔍 Buscar mesa..." style="width:100%; margin-bottom:15px; padding:12px; border:2px solid #ddd; border-radius:8px; font-size:1em;" onkeyup="filtrarMesas(this.value)">
+                    <input type="number" id="input-num-mesa" value="101" style="width:100%; margin-bottom:15px; padding:12px; border:2px solid #ddd; border-radius:8px; font-weight:bold; font-size:1.1em" placeholder="Número da mesa">
+                    <button class="btn btn-success" onclick="abrirNovaMesa()" style="width:100%; padding:15px; font-size:1.1em; background:var(--teal);">
+                        <span style="font-size:1.3em; margin-right:8px;">+</span> Abrir Mesa
+                    </button>
+                </div>
             </aside>
         </div>
     </div>
 
     <div id="tela-detalhes" class="tela">
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
                 <button class="btn btn-sm" onclick="mudarTela('salao')">← Voltar</button>
-                <h2 id="titulo-detalhes-mesa" style="margin:0">Mesa</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 id="titulo-detalhes-mesa" style="margin:0">Mesa</h2>
+                    <button class="btn btn-warning btn-sm" onclick="transferirMesaAtiva()" title="Transferir consumação desta mesa para outra">
+                        🔁 Transferir Mesa
+                    </button>
+                </div>
             </div>
             <div class="grid-detalhes">
                 <div>
@@ -276,19 +305,61 @@
             <h2>📜 Histórico de Vendas</h2>
             <div class="stats-historico">
                 <div class="card">
-                    <h3>Faturamento</h3><p id="h-total" style="font-size:1.5em; font-weight:bold">R$ 0,00</p>
+                    <h3>Total Pago</h3>
+                    <p id="h-total" style="font-size:1.5em; font-weight:bold">R$ 0,00</p>
                 </div>
                 <div class="card">
-                    <h3>Vendas</h3><p id="h-vendas" style="font-size:1.5em; font-weight:bold">0</p>
+                    <h3>Total em Aberto</h3>
+                    <p id="h-aberto" style="font-size:1.5em; font-weight:bold">R$ 0,00</p>
+                </div>
+                <div class="card">
+                    <h3>Vendas</h3>
+                    <p id="h-vendas" style="font-size:1.5em; font-weight:bold">0</p>
                 </div>
             </div>
             <div style="margin-bottom: 15px; text-align: right;">
                 <button class="btn btn-danger" onclick="resetarHistorico()">🗑️ Limpar Histórico</button>
             </div>
-            <table style="width:100%; border-collapse: collapse;">
-                <thead><tr style="text-align:left; border-bottom:2px solid #eee"><th>Data/Hora</th><th>Mesa</th><th>Total Pago</th></tr></thead>
-                <tbody id="corpo-historico"></tbody>
-            </table>
+            <div class="grid-detalhes" style="grid-template-columns: 2fr 1fr; margin-top:0;">
+                <div>
+                    <table style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #eee">
+                                <th>Data/Hora</th><th>Mesa</th><th>Total Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-historico"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <div class="card" style="background:#f8f9fa;">
+                        <h3 style="margin-top:0;">🧾 Detalhes da Venda</h3>
+                        <div id="h-detalhes-itens" class="lista-itens-recibo" style="max-height:220px;"></div>
+                        <div style="padding-top:5px; border-top:1px solid #ddd; font-size:0.95em;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span>Subtotal Itens:</span>
+                                <span id="h-det-subtotal">R$ 0,00</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span>Praia / Taxas:</span>
+                                <span id="h-det-praia">R$ 0,00</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span>10% Serviço:</span>
+                                <span id="h-det-servico">R$ 0,00</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span>Desconto:</span>
+                                <span id="h-det-desconto">R$ 0,00</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:6px; border-top:1px solid #ddd; padding-top:6px;">
+                                <span>Total Final:</span>
+                                <span id="h-det-total">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -521,6 +592,7 @@
         }
 
         const STORAGE_KEY_LOCAL = 'RESTAURANTE_DADOS_LOCAIS';
+        const STORAGE_KEY_TELA = 'RESTAURANTE_TELA_ATUAL';
 
         let sistema = {
             cardapio: [],
@@ -540,14 +612,15 @@
             }
         }
 
-        // Salva dados locais (mesas, cozinha, entregas, histórico) no localStorage
+        // Salva dados locais (mesas, cozinha, entregas, histórico, mesa ativa) no localStorage
         function salvarDadosLocais() {
             try {
                 const dadosLocais = {
                     mesas: sistema.mesas,
                     cozinha: sistema.cozinha,
                     entregasCozinha: sistema.entregasCozinha,
-                    historico: sistema.historico
+                    historico: sistema.historico,
+                    mesaAtivaId: sistema.mesaAtivaId
                 };
                 localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(dadosLocais));
             } catch (e) {
@@ -565,6 +638,7 @@
                     sistema.cozinha = dadosLocais.cozinha || [];
                     sistema.entregasCozinha = dadosLocais.entregasCozinha || {};
                     sistema.historico = dadosLocais.historico || [];
+                    sistema.mesaAtivaId = dadosLocais.mesaAtivaId || null;
                 }
             } catch (e) {
                 console.error('Erro ao carregar dados locais:', e);
@@ -584,6 +658,20 @@
             
             // Renderiza após inicialização
             renderizar();
+
+            // Recupera a última tela usada (mantém página atual após recarregar)
+            let telaInicial = 'salao';
+            try {
+                const telaSalva = localStorage.getItem(STORAGE_KEY_TELA);
+                if (telaSalva && document.getElementById('tela-' + telaSalva)) {
+                    // Evita reabrir tela de fechamento sem contexto; cai para detalhes ou salão
+                    telaInicial = telaSalva === 'fechamento' ? (sistema.mesaAtivaId ? 'detalhes' : 'salao') : telaSalva;
+                }
+            } catch (e) {
+                console.error('Erro ao carregar tela inicial:', e);
+            }
+
+            mudarTela(telaInicial);
         })();
 
         function carregarCategorias() {
@@ -600,27 +688,114 @@
         function mudarTela(tela) {
             document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
             document.getElementById('tela-' + tela).classList.add('ativa');
+            // Atualiza navegação ativa
+            document.querySelectorAll('.nav-buttons .btn').forEach(btn => btn.classList.remove('ativo'));
+            const navBtn = document.getElementById('nav-' + tela);
+            if(navBtn) navBtn.classList.add('ativo');
+
+            // Persiste tela atual para manter após recarregar
+            try {
+                localStorage.setItem(STORAGE_KEY_TELA, tela);
+            } catch (e) {
+                console.error('Erro ao salvar tela atual:', e);
+            }
+
             renderizar();
         }
 
         // --- GESTÃO DE MESAS ---
         function abrirNovaMesa() {
             const input = document.getElementById('input-num-mesa');
-            const num = input.value;
-            if(!num) return alert("Digite o número da mesa!");
-            if(sistema.mesas.find(m => (m.numeroMesa || m.id) == num)) return alert("Essa mesa já está no mapa!");
+            const num = input ? input.value : prompt("Digite o número da mesa:");
+            if(!num) return;
+            if(sistema.mesas.find(m => String(m.numeroMesa || m.id) == String(num))) return alert("Essa mesa já está no mapa!");
+            
+            // Determina setor baseado no número da mesa
+            // Mesas 101+ são da Areia, mesas 01-99 são do Salão Interno
+            const setor = (parseInt(num) >= 100) ? 'areia' : 'salao';
             
             // Cria mesa apenas localmente, sem salvar na API
-            const novaMesa = { numeroMesa: num, status: 'livre', pedidos: [] };
+            const novaMesa = { numeroMesa: String(num), status: 'livre', pedidos: [], setor: setor };
             sistema.mesas.push(novaMesa);
-            input.value = parseInt(num) + 1; 
+            if(input) input.value = parseInt(num) + 1; 
             salvarDadosLocais();
+            renderizar();
+        }
+        
+        function filtrarMesas(busca) {
+            // Implementação futura para filtrar mesas na busca
             renderizar();
         }
 
         function abrirDetalheMesa(numeroMesa) {
             sistema.mesaAtivaId = numeroMesa;
             mudarTela('detalhes');
+        }
+
+        // Transfere a consumação da mesa ativa para outra mesa
+        function transferirMesaAtiva() {
+            if (!sistema.mesaAtivaId) {
+                alert('Nenhuma mesa ativa selecionada.');
+                return;
+            }
+
+            const mesaOrigem = sistema.mesas.find(m => String(m.numeroMesa || m.id) === String(sistema.mesaAtivaId));
+            if (!mesaOrigem) {
+                alert('Mesa de origem não encontrada.');
+                return;
+            }
+
+            const destinoNumero = prompt('Para qual número de mesa deseja transferir a consumação?');
+            if (!destinoNumero) return;
+
+            if (String(destinoNumero) === String(mesaOrigem.numeroMesa || mesaOrigem.id)) {
+                alert('A mesa de destino deve ser diferente da mesa de origem.');
+                return;
+            }
+
+            // Localiza ou cria mesa de destino
+            let mesaDestino = sistema.mesas.find(m => String(m.numeroMesa || m.id) === String(destinoNumero));
+            if (!mesaDestino) {
+                const setorDestino = (parseInt(destinoNumero) >= 100) ? 'areia' : 'salao';
+                mesaDestino = { numeroMesa: String(destinoNumero), status: 'livre', pedidos: [], setor: setorDestino };
+                sistema.mesas.push(mesaDestino);
+            }
+
+            // Transfere pedidos (consumação)
+            if (mesaOrigem.pedidos && mesaOrigem.pedidos.length > 0) {
+                mesaDestino.pedidos = (mesaDestino.pedidos || []).concat(mesaOrigem.pedidos);
+            }
+
+            // Transfere itens na cozinha
+            sistema.cozinha.forEach(item => {
+                if (String(item.mesaId) === String(mesaOrigem.numeroMesa || mesaOrigem.id)) {
+                    item.mesaId = String(destinoNumero);
+                }
+            });
+
+            // Transfere controle de entregas da cozinha
+            const novasEntregas = {};
+            for (let chave in sistema.entregasCozinha) {
+                if (!Object.prototype.hasOwnProperty.call(sistema.entregasCozinha, chave)) continue;
+                const [mesaIdChave, nomeItem] = chave.split('_');
+                if (String(mesaIdChave) === String(mesaOrigem.numeroMesa || mesaOrigem.id)) {
+                    const novaChave = `${destinoNumero}_${nomeItem}`;
+                    novasEntregas[novaChave] = (novasEntregas[novaChave] || 0) + sistema.entregasCozinha[chave];
+                    delete sistema.entregasCozinha[chave];
+                }
+            }
+            Object.assign(sistema.entregasCozinha, novasEntregas);
+
+            // Remove mesa de origem do mapa
+            sistema.mesas = sistema.mesas.filter(m => m !== mesaOrigem);
+
+            // Atualiza mesa ativa para a nova mesa
+            sistema.mesaAtivaId = String(destinoNumero);
+
+            salvarDadosLocais();
+            renderizar();
+            // Continua na tela de detalhes, agora da mesa de destino
+            abrirDetalheMesa(destinoNumero);
         }
 
         // --- GESTÃO DE LANÇAMENTOS ---
@@ -834,15 +1009,84 @@
 
         // --- RENDERIZADORES ---
         function renderizar() {
-            // MAPA
-            document.getElementById('grid-mesas').innerHTML = sistema.mesas.map(m => {
-                const numeroMesa = m.numeroMesa || m.id;
+            // MAPA POR SETORES
+            // Ordena mesas pelo número (numericamente crescente), independente da ordem de abertura
+            const mesasOrdenadas = [...sistema.mesas].sort((a, b) => {
+                const numA = parseInt(a.numeroMesa || a.id);
+                const numB = parseInt(b.numeroMesa || b.id);
+                if (isNaN(numA) || isNaN(numB)) {
+                    return String(a.numeroMesa || a.id).localeCompare(String(b.numeroMesa || b.id));
+                }
+                return numA - numB;
+            });
+
+            const mesasAreia = mesasOrdenadas.filter(m => (m.setor || (parseInt(m.numeroMesa || m.id) >= 100 ? 'areia' : 'salao')) === 'areia');
+            const mesasSalao = mesasOrdenadas.filter(m => (m.setor || (parseInt(m.numeroMesa || m.id) >= 100 ? 'areia' : 'salao')) === 'salao');
+            
+            // Garante que mesas antigas tenham setor
+            sistema.mesas.forEach(m => {
+                if(!m.setor) {
+                    m.setor = (parseInt(m.numeroMesa || m.id) >= 100) ? 'areia' : 'salao';
+                }
+            });
+            
+            function renderizarSetor(mesas, setorNome, setorId, icon) {
+                if(mesas.length === 0) return '';
                 return `
-                <div class="mesa-box ${m.status}" onclick="abrirDetalheMesa('${numeroMesa}')">
-                    <b>Mesa ${numeroMesa}</b><br><small>${m.status.toUpperCase()}</small>
-                </div>
-            `;
-            }).join('');
+                    <div class="setor-mesas setor-${setorId}">
+                        <div class="setor-header">
+                            <span class="setor-icon">${icon}</span>
+                            <span>Setor: ${setorNome}</span>
+                        </div>
+                        <div class="grid-mesas">
+                            ${mesas.map(m => {
+                                const numeroMesa = m.numeroMesa || m.id;
+
+                                // Verifica pendências na cozinha para esta mesa
+                                const temPendenciasCozinha = sistema.cozinha.some(c => String(c.mesaId) === String(numeroMesa));
+
+                                // Define status visual conforme sua regra:
+                                // - \"Pronta\" (verde): mesa com consumo (pedidos) e SEM pendência na cozinha
+                                // - \"Pendente\" (vermelho): mesa com pendência na cozinha
+                                // - \"Ocupada\" (azul): mesa existe no mapa mas não tem consumo
+                                let statusVisual = 'Ocupada';
+                                let labelClass = 'livre'; // classe \"livre\" agora estilizada como azul (ocupada)
+
+                                const temConsumo = m.pedidos && m.pedidos.length > 0;
+
+                                if (temPendenciasCozinha) {
+                                    statusVisual = 'Pendente';
+                                    labelClass = 'pendente';
+                                } else if (temConsumo) {
+                                    statusVisual = 'Pronta';
+                                    labelClass = 'pronta';
+                                }
+
+                                // Ícones diferentes por setor: Areia usa guarda-sol, Salão usa mesa de madeira
+                                const mesaIcon = setorId === 'areia' ? '🏖️' : '🪑';
+
+                                // Texto no formato: Mesa XXX (Status)
+                                const labelTexto = `Mesa ${numeroMesa} (${statusVisual})`;
+                                
+                                return `
+                                    <div class="mesa-box" onclick="abrirDetalheMesa('${numeroMesa}')">
+                                        <div class="mesa-icon">${mesaIcon}</div>
+                                        <div class="mesa-label ${labelClass}">${labelTexto}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            const mapaHtml = renderizarSetor(mesasAreia, 'Areia', 'areia', '🏖️') + 
+                           renderizarSetor(mesasSalao, 'Salão Interno', 'salao', '🏠');
+            
+            const mapaContainer = document.getElementById('mapa-mesas-setores');
+            if(mapaContainer) {
+                mapaContainer.innerHTML = mapaHtml || '<p style="text-align:center; color:#999;">Nenhuma mesa aberta. Use o botão "+ Abrir Mesa" para começar.</p>';
+            }
 
             // COZINHA
             let kds = {}; 
@@ -873,28 +1117,28 @@
                     if(entregues < quantidade) todosEntregues = false;
                     
                     itensHtml += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #eee;">
-                            <span style="flex:1">${nomeItem} x ${quantidade}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.2);">
+                            <span style="flex:1; color:white;">${nomeItem} x ${quantidade}</span>
                             <div style="display:flex; align-items:center; gap:5px;">
-                                <button class="btn btn-sm" style="background:#ddd; padding:2px 8px;" onclick="ajustarEntrega('${mid}', '${nomeItem}', -1)">-</button>
-                                <span style="min-width:30px; text-align:center; font-weight:bold; color:${entregues >= quantidade ? '#2ecc71' : '#e74c3c'}">${entregues}/${quantidade}</span>
-                                <button class="btn btn-sm" style="background:#ddd; padding:2px 8px;" onclick="ajustarEntrega('${mid}', '${nomeItem}', 1)">+</button>
+                                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; padding:2px 8px; border:none;" onclick="ajustarEntrega('${mid}', '${nomeItem}', -1)">-</button>
+                                <span style="min-width:30px; text-align:center; font-weight:bold; color:${entregues >= quantidade ? '#2ecc71' : '#ffeb3b'}">${entregues}/${quantidade}</span>
+                                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; padding:2px 8px; border:none;" onclick="ajustarEntrega('${mid}', '${nomeItem}', 1)">+</button>
                             </div>
                         </div>
                     `;
                 }
                 
                 kHtml += `
-                    <div style="background:#fff; color:#333; padding:10px; margin-bottom:10px; border-radius:8px">
-                        <b style="font-size:1.1em">Mesa ${mid}</b>
+                    <div style="background:rgba(255,255,255,0.1); color:white; padding:10px; margin-bottom:10px; border-radius:8px">
+                        <b style="font-size:1.1em; color:white;">Mesa ${mid}</b>
                         <div style="margin-top:8px">${itensHtml}</div>
-                        <button class="btn btn-success btn-sm" onclick="concluirCozinha('${mid}')" style="margin-top:10px; width:100%" ${todosEntregues ? '' : 'disabled'}>
+                        <button class="btn btn-success btn-sm" onclick="concluirCozinha('${mid}')" style="margin-top:10px; width:100%; background:${todosEntregues ? '#2ecc71' : '#95a5a6'}; color:white; border:none;" ${todosEntregues ? '' : 'disabled'}>
                             ${todosEntregues ? '✅ Pronto' : '⏳ Aguardando entregas'}
                         </button>
                     </div>
                 `;
             }
-            document.getElementById('lista-cozinha').innerHTML = kHtml || "Sem pedidos.";
+            document.getElementById('lista-cozinha').innerHTML = kHtml || '<p style="color:rgba(255,255,255,0.7); text-align:center;">Sem pedidos.</p>';
 
             // ESTOQUE - Ordenado por código crescente
             const estoqueOrdenado = [...sistema.cardapio].sort((a, b) => {
@@ -951,37 +1195,64 @@
                 </tr>`;
             }).join('');
 
-            // MESA DETALHE
+            // MESA DETALHE (visualização somente leitura dos itens consumidos)
             const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
             if(mesa) {
                 const numeroMesa = mesa.numeroMesa || mesa.id;
                 document.getElementById('titulo-detalhes-mesa').innerText = "Mesa " + numeroMesa;
-                let agrupado = {}; 
-                mesa.pedidos.forEach(p => agrupado[p.nome] = (agrupado[p.nome] || 0) + 1);
+
+                // Agrupa itens consumidos (nome, quantidade, valor unitário e total)
+                const agrupado = {};
+                mesa.pedidos.forEach(p => {
+                    if (!agrupado[p.nome]) {
+                        agrupado[p.nome] = { qtd: 0, valor: p.valor };
+                    }
+                    agrupado[p.nome].qtd += 1;
+                });
                 
                 let cHtml = "";
-                for(let n in agrupado) {
+                for (let n in agrupado) {
+                    const linhaTotal = agrupado[n].qtd * agrupado[n].valor;
                     cHtml += `
                     <div class="item-lancamento">
-                        <span><b>${n}</b></span>
-                        <div style="display:flex; gap:10px; align-items:center">
-                            <input type="number" class="input-qtd" value="${agrupado[n]}" onchange="ajustarQtdConsumo('${n}', this.value)">
-                            <button class="btn btn-danger btn-sm" onclick="ajustarQtdConsumo('${n}', 0)">Remover</button>
+                        <span><b>${agrupado[n].qtd}x ${n}</b></span>
+                        <div style="display:flex; gap:10px; align-items:center; font-weight:bold;">
+                            <span>R$ ${linhaTotal.toFixed(2)}</span>
                         </div>
                     </div>`;
                 }
                 document.getElementById('itens-consumo').innerHTML = cHtml || "Mesa vazia.";
+
                 const total = mesa.pedidos.reduce((a,b) => a + b.valor, 0);
                 document.getElementById('total-mesa-texto').innerText = `Total: R$ ${total.toFixed(2)}`;
+
+                // Lista de itens para lançamento permanece normal e editável
                 renderizarItensLancamento();
             }
 
             // HISTÓRICO
+            // Total pago: soma de todas as vendas já confirmadas
             let fat = sistema.historico.reduce((a,b) => a + b.total, 0);
             document.getElementById('h-total').innerText = `R$ ${fat.toFixed(2)}`;
+
+            // Total em aberto: soma do consumo atual de todas as mesas que ainda estão abertas
+            let totalAberto = sistema.mesas.reduce((acc, mesa) => {
+                if (!mesa.pedidos || mesa.pedidos.length === 0) return acc;
+                const subtotalMesa = mesa.pedidos.reduce((a, b) => a + b.valor, 0);
+                return acc + subtotalMesa;
+            }, 0);
+            const elAberto = document.getElementById('h-aberto');
+            if (elAberto) {
+                elAberto.innerText = `R$ ${totalAberto.toFixed(2)}`;
+            }
+
             document.getElementById('h-vendas').innerText = sistema.historico.length;
-            document.getElementById('corpo-historico').innerHTML = sistema.historico.map(h => `
-                <tr><td>${new Date(h.ts).toLocaleString()}</td><td>Mesa ${h.mesa}</td><td>R$ ${h.total.toFixed(2)}</td></tr>
+            document.getElementById('corpo-historico').innerHTML = sistema.historico.map((h, idx) => `
+                <tr style="cursor:pointer" onclick="abrirDetalheHistorico(${idx})">
+                    <td>${new Date(h.ts).toLocaleString()}</td>
+                    <td>Mesa ${h.mesa}</td>
+                    <td>R$ ${h.total.toFixed(2)}</td>
+                </tr>
             `).join('');
         }
 
@@ -1121,8 +1392,14 @@
         }
 
         async function confirmarVendaFinal() {
-            const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
-            const numeroMesa = mesa.numeroMesa || mesa.id;
+            const mesa = sistema.mesas.find(m => String(m.numeroMesa || m.id) == String(sistema.mesaAtivaId));
+            if(!mesa) {
+                alert('Mesa não encontrada!');
+                mudarTela('salao');
+                return;
+            }
+            
+            const numeroMesa = String(mesa.numeroMesa || mesa.id);
             
             // Recalcula final
             const temServico = document.getElementById('check-servico').checked;
@@ -1132,15 +1409,86 @@
             const valorServico = temServico ? (baseCalculoServico * 0.10) : 0;
             const totalFinal = baseCalculoServico + valorServico - desconto;
 
-            // Cria histórico local
-            const novoHistorico = { ts: new Date().toISOString(), mesa: numeroMesa, total: totalFinal };
+            // Agrupa itens consumidos no momento do fechamento (snapshot)
+            const agrupado = {};
+            mesa.pedidos.forEach(p => {
+                if (!agrupado[p.nome]) {
+                    agrupado[p.nome] = { qtd: 0, valor: p.valor };
+                }
+                agrupado[p.nome].qtd += 1;
+            });
+            const itensHistorico = Object.keys(agrupado).map(nome => ({
+                nome,
+                qtd: agrupado[nome].qtd,
+                valorUnit: agrupado[nome].valor,
+                total: agrupado[nome].qtd * agrupado[nome].valor
+            }));
+
+            // Cria histórico local (inclui detalhes para visualização futura, sem edição)
+            const novoHistorico = { 
+                ts: new Date().toISOString(),
+                mesa: numeroMesa,
+                total: totalFinal,
+                subtotal: subtotalCache,
+                praia,
+                servico: valorServico,
+                desconto,
+                itens: itensHistorico
+            };
             sistema.historico.push(novoHistorico);
             
-            // Atualiza mesa e salva tudo localmente
-            mesa.pedidos = [];
-            mesa.status = 'livre';
+            // Remove itens da cozinha relacionados à mesa (comparação robusta)
+            sistema.cozinha = sistema.cozinha.filter(c => String(c.mesaId) !== numeroMesa);
+            
+            // Remove entregas da cozinha relacionadas à mesa
+            for(let chave in sistema.entregasCozinha) {
+                if(chave.startsWith(`${numeroMesa}_`)) {
+                    delete sistema.entregasCozinha[chave];
+                }
+            }
+            
+            // Remove a mesa do mapa completamente
+            sistema.mesas = sistema.mesas.filter(m => String(m.numeroMesa || m.id) !== numeroMesa);
+            
+            // Limpa a mesa ativa
+            sistema.mesaAtivaId = null;
+            
             salvarDadosLocais();
+            renderizar();
             mudarTela('salao');
+        }
+
+        // Detalhes somente leitura de uma venda no histórico
+        function abrirDetalheHistorico(idx) {
+            const venda = sistema.historico[idx];
+            if (!venda) return;
+
+            const containerItens = document.getElementById('h-detalhes-itens');
+            const elSubtotal = document.getElementById('h-det-subtotal');
+            const elPraia = document.getElementById('h-det-praia');
+            const elServico = document.getElementById('h-det-servico');
+            const elDesconto = document.getElementById('h-det-desconto');
+            const elTotal = document.getElementById('h-det-total');
+
+            if (!venda.itens || venda.itens.length === 0) {
+                if (containerItens) {
+                    containerItens.innerHTML = "<p>Venda antiga sem detalhes de itens armazenados.</p>";
+                }
+            } else {
+                const htmlItens = venda.itens.map(item => `
+                    <div style="display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px dotted #ccc;">
+                        <span>${item.qtd}x ${item.nome}</span>
+                        <span>R$ ${item.total.toFixed(2)}</span>
+                    </div>
+                `).join('');
+                if (containerItens) containerItens.innerHTML = htmlItens;
+            }
+
+            if (elSubtotal) elSubtotal.innerText = `R$ ${(venda.subtotal || 0).toFixed(2)}`;
+            if (elPraia) elPraia.innerText = `R$ ${(venda.praia || 0).toFixed(2)}`;
+            if (elServico) elServico.innerText = `R$ ${(venda.servico || 0).toFixed(2)}`;
+            if (elDesconto) elDesconto.innerText = `R$ ${(venda.desconto || 0).toFixed(2)}`;
+            if (elTotal) elTotal.innerText = `R$ ${(venda.total || 0).toFixed(2)}`;
         }
     </script>
 </body>
