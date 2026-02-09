@@ -224,6 +224,10 @@
                 <div class="card">
                     <input type="text" id="busca-mesa" placeholder="🔍 Buscar mesa..." style="width:100%; margin-bottom:15px; padding:12px; border:2px solid #ddd; border-radius:8px; font-size:1em;" onkeyup="filtrarMesas(this.value)">
                     <input type="number" id="input-num-mesa" value="101" style="width:100%; margin-bottom:15px; padding:12px; border:2px solid #ddd; border-radius:8px; font-weight:bold; font-size:1.1em" placeholder="Número da mesa">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                        <label for="input-praia" style="font-weight:bold; min-width:60px;">Praia:</label>
+                        <input type="number" id="input-praia" value="0.00" step="0.01" min="0" style="flex:1; padding:12px; border:2px solid #ddd; border-radius:8px; font-size:1em;" placeholder="0.00" onchange="salvarValorPraia()">
+                    </div>
                     <button class="btn btn-success" onclick="abrirNovaMesa()" style="width:100%; padding:15px; font-size:1.1em; background:var(--teal);">
                         <span style="font-size:1.3em; margin-right:8px;">+</span> Abrir Mesa
                     </button>
@@ -593,6 +597,7 @@
 
         const STORAGE_KEY_LOCAL = 'RESTAURANTE_DADOS_LOCAIS';
         const STORAGE_KEY_TELA = 'RESTAURANTE_TELA_ATUAL';
+        const STORAGE_KEY_PRAIA = 'RESTAURANTE_VALOR_PRAIA';
 
         let sistema = {
             cardapio: [],
@@ -658,6 +663,8 @@
             
             // Renderiza após inicialização
             renderizar();
+            // Carrega valor da Praia salvo
+            carregarValorPraia();
 
             // Recupera a última tela usada (mantém página atual após recarregar)
             let telaInicial = 'salao';
@@ -725,6 +732,28 @@
         function filtrarMesas(busca) {
             // Implementação futura para filtrar mesas na busca
             renderizar();
+        }
+        
+        // Salva o valor da Praia no localStorage
+        function salvarValorPraia() {
+            const inputPraia = document.getElementById('input-praia');
+            if(inputPraia) {
+                const valor = parseFloat(inputPraia.value) || 0;
+                localStorage.setItem(STORAGE_KEY_PRAIA, valor.toString());
+            }
+        }
+        
+        // Carrega o valor da Praia do localStorage
+        function carregarValorPraia() {
+            try {
+                const valorSalvo = localStorage.getItem(STORAGE_KEY_PRAIA);
+                const inputPraia = document.getElementById('input-praia');
+                if(inputPraia && valorSalvo) {
+                    inputPraia.value = parseFloat(valorSalvo).toFixed(2);
+                }
+            } catch(e) {
+                console.error('Erro ao carregar valor da praia:', e);
+            }
         }
 
         function abrirDetalheMesa(numeroMesa) {
@@ -1195,38 +1224,30 @@
                 </tr>`;
             }).join('');
 
-            // MESA DETALHE (visualização somente leitura dos itens consumidos)
+            // MESA DETALHE (com controles interativos de quantidade e remover)
             const mesa = sistema.mesas.find(m => (m.numeroMesa || m.id) == sistema.mesaAtivaId);
             if(mesa) {
                 const numeroMesa = mesa.numeroMesa || mesa.id;
                 document.getElementById('titulo-detalhes-mesa').innerText = "Mesa " + numeroMesa;
 
                 // Agrupa itens consumidos (nome, quantidade, valor unitário e total)
-                const agrupado = {};
-                mesa.pedidos.forEach(p => {
-                    if (!agrupado[p.nome]) {
-                        agrupado[p.nome] = { qtd: 0, valor: p.valor };
-                    }
-                    agrupado[p.nome].qtd += 1;
-                });
+                let agrupado = {}; 
+                mesa.pedidos.forEach(p => agrupado[p.nome] = (agrupado[p.nome] || 0) + 1);
                 
                 let cHtml = "";
-                for (let n in agrupado) {
-                    const linhaTotal = agrupado[n].qtd * agrupado[n].valor;
+                for(let n in agrupado) {
                     cHtml += `
                     <div class="item-lancamento">
-                        <span><b>${agrupado[n].qtd}x ${n}</b></span>
-                        <div style="display:flex; gap:10px; align-items:center; font-weight:bold;">
-                            <span>R$ ${linhaTotal.toFixed(2)}</span>
+                        <span><b>${n}</b></span>
+                        <div style="display:flex; gap:10px; align-items:center">
+                            <input type="number" class="input-qtd" value="${agrupado[n]}" onchange="ajustarQtdConsumo('${n}', this.value)" min="0">
+                            <button class="btn btn-danger btn-sm" onclick="ajustarQtdConsumo('${n}', 0)">Remover</button>
                         </div>
                     </div>`;
                 }
                 document.getElementById('itens-consumo').innerHTML = cHtml || "Mesa vazia.";
-
                 const total = mesa.pedidos.reduce((a,b) => a + b.valor, 0);
                 document.getElementById('total-mesa-texto').innerText = `Total: R$ ${total.toFixed(2)}`;
-
-                // Lista de itens para lançamento permanece normal e editável
                 renderizarItensLancamento();
             }
 
@@ -1367,9 +1388,10 @@
             subtotalCache = mesa.pedidos.reduce((a,b) => a + b.valor, 0);
             document.getElementById('f-subtotal').innerText = `R$ ${subtotalCache.toFixed(2)}`;
 
-            // 3. Reseta Inputs
+            // 3. Reseta Inputs e carrega valor da Praia salvo
             document.getElementById('f-desconto').value = "0.00";
-            document.getElementById('f-praia').value = "0.00";
+            const valorPraia = localStorage.getItem(STORAGE_KEY_PRAIA) || "0.00";
+            document.getElementById('f-praia').value = parseFloat(valorPraia).toFixed(2);
             document.getElementById('check-servico').checked = true;
 
             calcularTotaisFechamento();
